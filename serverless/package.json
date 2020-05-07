@@ -1,0 +1,14 @@
+{
+  "name": "",
+  "version": "",
+  "description": "",
+  "scripts": {
+    "start": "azfun.cmd start",
+    "test": "jest"
+  },
+  "author": "",
+  "dependencies": {
+    "jest": "^25.4.0",
+    "stellar-sdk": "^4.1.0"
+  }
+}
