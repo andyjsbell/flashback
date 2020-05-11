@@ -66,6 +66,4 @@ module.exports = async function (context, req) {
             body: "Please pass a valid body"
         };
     }
-
-
 };
