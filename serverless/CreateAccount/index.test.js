@@ -12,4 +12,5 @@ it('should create account and have balance of 1 lumens', async () => {
 
     await httpFunction(context, request);
     expect(context.res.body.status).toEqual("Succeeded");
+    expect(context.res.body.publicKey).toBeDefined();
 });
