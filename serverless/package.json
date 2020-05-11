@@ -8,6 +8,7 @@
   },
   "author": "",
   "dependencies": {
+    "bignumber.js": "^9.0.0",
     "jest": "^25.4.0",
     "stellar-sdk": "^4.1.0"
   }
