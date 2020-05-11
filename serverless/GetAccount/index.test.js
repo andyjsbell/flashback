@@ -20,4 +20,5 @@ it('should get account ', async () => {
 
   await httpFunction(context, request);
   expect(context.res.body.status).toEqual("Succeeded");
+  expect(context.res.body.publicKeys.length).toEqual(1);
 });

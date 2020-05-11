@@ -13,10 +13,12 @@ module.exports = async function (context, req) {
             });
 
             if (accounts.length > 0) {
+                let publicKeys = [];
+                accounts.forEach(account => publicKeys.push(account.RowKey));
                 context.res = {
                     body: {
                         status: "Succeeded",
-                        accounts
+                        publicKeys
                     }
                 };
             } else {
