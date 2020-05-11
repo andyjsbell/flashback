@@ -8,7 +8,7 @@
       "methods": [
         "post"
       ],
-      "route": "accounts"
+      "route": "accounts/create"
     },
     {
       "type": "http",
