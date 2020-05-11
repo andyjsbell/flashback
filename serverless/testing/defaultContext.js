@@ -1,6 +1,6 @@
 module.exports = {
     log: jest.fn(),
-    bindings: {roomTable: []},
+    bindings: {accountsTable: []},
     bindingData: {
         room: '',
         channel: '',
