@@ -9,7 +9,7 @@ module.exports = async function (context, req) {
         if (validateEmail(newEmail)) {
 
             const accounts = context.bindings.accountsTable.filter(row => {
-                return (row.PartitionKey === req.query.email);
+                return (row.PartitionKey === newEmail);
             });
 
             if (accounts.length > 0) {

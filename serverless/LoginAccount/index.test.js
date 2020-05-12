@@ -2,10 +2,9 @@ const httpFunction = require('./index');
 const context = require('../testing/defaultContext');
 
 it('should get account ', async () => {
-  jest.setTimeout(30000);
 
   const request = {
-    query: {
+    body: {
       email: "a@a.com"
     }
   };
@@ -20,5 +19,5 @@ it('should get account ', async () => {
 
   await httpFunction(context, request);
   expect(context.res.body.status).toEqual("Succeeded");
-  expect(context.res.body.publicKeys.length).toEqual(1);
+  expect(context.res.body.accounts.length).toEqual(1);
 });
