@@ -1,0 +1,33 @@
+{
+  "bindings": [
+    {
+      "authLevel": "function",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [
+        "get"
+      ],
+      "route": "vouchers"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    },
+    {
+      "tableName": "Accounts",
+      "connection": "AzureWebJobsStorage",
+      "name": "accountsTable",
+      "type": "table",
+      "direction": "out"
+    },
+    {
+      "tableName": "Vouchers",
+      "connection": "AzureWebJobsStorage",
+      "name": "vouchersTable",
+      "type": "table",
+      "direction": "out"
+    }
+  ]
+}
