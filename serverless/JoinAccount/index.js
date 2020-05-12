@@ -14,12 +14,12 @@ module.exports = async function (context, req) {
             try {
 
                 const sourceAccountKeyPair = StellarSdk.Keypair.fromSecret(TEST_ACCOUNT_SECRET);
-                const account = await server.loadAccount(sourceAccountKeyPair.publicKey());
+                const serverAccount = await server.loadAccount(sourceAccountKeyPair.publicKey());
 
                 const fee = await server.fetchBaseFee();
                 const newAccountKeyPair = StellarSdk.Keypair.random();
 
-                const transaction = new StellarSdk.TransactionBuilder(account, {
+                const transaction = new StellarSdk.TransactionBuilder(serverAccount, {
                     fee, networkPassphrase: StellarSdk.Networks.TESTNET
                 }).addOperation(StellarSdk.Operation.createAccount({
                     destination: newAccountKeyPair.publicKey(),
@@ -28,24 +28,26 @@ module.exports = async function (context, req) {
 
                 transaction.sign(sourceAccountKeyPair);
 
-                const transactionResult = await server.submitTransaction(transaction);
+                await server.submitTransaction(transaction);
 
                 context.bindings.accountsTable = [];
 
-                context.bindings.accountsTable.push({
+                const account = {
                     PartitionKey: newEmail,
                     RowKey: newAccountKeyPair.publicKey(),
                     Secret: newAccountKeyPair.secret()
-                });
+                };
+
+                context.bindings.accountsTable.push(account);
 
                 context.res = {
                     // status: 200, /* Defaults to 200 */
                     body: {
                         status: "Succeeded",
-                        transactionResult,
-                        publicKey: newAccountKeyPair.publicKey()
+                        account
                     }
                 };
+
             } catch(e) {
                 context.res = {
                     status: 400,
