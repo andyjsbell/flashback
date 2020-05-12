@@ -13,12 +13,14 @@ module.exports = async function (context, req) {
         req.body.to &&
         req.body.from &&
         req.body.xdr1 &&
-        req.body.xdr2) {
+        req.body.xdr2 &&
+        req.body.escrow) {
 
-        const toEmail = req.body.email;
-        const fromEmail = req.body.email;
+        const toEmail = req.body.to;
+        const fromEmail = req.body.from;
         const xdr1 = req.body.xdr1;
         const xdr2 = req.body.xdr2;
+        const escrowAccount = req.body.escrowAccount;
 
         if (validateEmail(toEmail) &&
             validateEmail(fromEmail) &&
@@ -41,7 +43,8 @@ module.exports = async function (context, req) {
                     PartitionKey: fromEmail,
                     RowKey: toEmail,
                     xdr1,
-                    xdr2
+                    xdr2,
+                    escrowAccount
                 });
 
                 context.res = {
@@ -51,7 +54,8 @@ module.exports = async function (context, req) {
                         toEmail,
                         fromEmail,
                         xdr1,
-                        xdr2
+                        xdr2,
+                        escrowAccount
                     }
                 };
             } else {
