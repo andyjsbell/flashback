@@ -1,8 +1,6 @@
 const StellarSdk = require('stellar-sdk');
 const { validateEmail } = require('../emails');
 
-const TEST_ACCOUNT_SECRET = "SBMRMWK2ZAIRIMK7JPIPXKYIS57TKCV3BTYNWPCZWWNU6YLB4NJQFMDB";
-
 module.exports = async function (context, req) {
 
     context.log("CreateAccount endpoint called", req.body);
