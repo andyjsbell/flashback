@@ -1,18 +1,10 @@
 import StellarSdk from 'stellar-sdk';
 import BigNumber from 'bignumber.js';
 
-const SENDER_ACCOUNT = {
-  publicKey: "GAA4RKBX2XGKTVFN67MOEWVPRXUWC34SOI6B76ZPK4APZLRRYA6O6D7R",
-  secret: "SC6LVTP3QQSJKMHYCHUYV5RZ2Y3OTI3T5GG72KZ2ZX4SRSSVP3AGIWPL"
-};
-const DEST_ACCOUNT = {
-  publicKey: "GAGSNSUIPKQT4BS6KX3GXUQGHCUD4FOVPTFIHZK7OZDMIDXH7W5H6WRH"
-};
-
 let fee = 0;
 const timeout = 5 * 60;
 
-const createVoucher = async (transferAmount) => {
+const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAccountPublicKey) => {
 
   // We are sending to destination account DEST_ACCOUNT, this is a new account which we create(PK would be returned from
   // central server, for this test we will use DEST_ACCOUNT
@@ -27,7 +19,6 @@ const createVoucher = async (transferAmount) => {
     fee = await server.fetchBaseFee();
 
     // Load our sender account
-    const sourceAccountKeyPair = StellarSdk.Keypair.fromSecret(SENDER_ACCOUNT.secret);
     const sourceAccount = await server.loadAccount(sourceAccountKeyPair.publicKey());
 
     // Create a key pair for the new escrow account
@@ -70,7 +61,7 @@ const createVoucher = async (transferAmount) => {
     const transactionResult_1 = await server.submitTransaction(transaction_1);
 
     // Create pre-auth merge ops
-    const [preAuthTx_1, preAuthTx_2] = createPreAuthTx(escrowAccountKeyPair, escrow_account.sequenceNumber(), DEST_ACCOUNT, SENDER_ACCOUNT);
+    const [preAuthTx_1, preAuthTx_2] = createPreAuthTx(escrowAccountKeyPair, escrow_account.sequenceNumber(), destinationAccountPublicKey, sourceAccountKeyPair);
 
     const transaction_2 = new StellarSdk.TransactionBuilder(sourceAccount, {
       fee, networkPassphrase: StellarSdk.Networks.TESTNET
@@ -123,7 +114,7 @@ const createVoucher = async (transferAmount) => {
 
 }
 
-const createPreAuthTx = (keyPair, seqNo, destination_account, sender_account) => {
+const createPreAuthTx = (keyPair, seqNo, destinationAccountPublicKey, sourceAccountKeyPair) => {
   // Create two merge transactions to be pre authourised
   const nextSeqNo = new BigNumber(seqNo);
 
@@ -137,7 +128,7 @@ const createPreAuthTx = (keyPair, seqNo, destination_account, sender_account) =>
       maxTime: now + timeout
     }
   }).addOperation(StellarSdk.Operation.accountMerge({
-    destination: destination_account.publicKey
+    destination: destinationAccountPublicKey
   })).build();
 
   const transaction_4 = new StellarSdk.TransactionBuilder(new StellarSdk.Account(keyPair.publicKey(), nextSeqNo.toString()), {
@@ -148,7 +139,7 @@ const createPreAuthTx = (keyPair, seqNo, destination_account, sender_account) =>
       maxTime: 0
     }
   }).addOperation(StellarSdk.Operation.accountMerge({
-    destination: sender_account.publicKey
+    destination: sourceAccountKeyPair.publicKey()
   })).build();
 
   return [
