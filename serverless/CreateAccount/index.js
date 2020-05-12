@@ -10,49 +10,47 @@ module.exports = async function (context, req) {
     if (req.body && req.body.email) {
         const newEmail = req.body.email;
         if (validateEmail(newEmail)) {
-            const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
-            try {
 
-                const sourceAccountKeyPair = StellarSdk.Keypair.fromSecret(TEST_ACCOUNT_SECRET);
-                const account = await server.loadAccount(sourceAccountKeyPair.publicKey());
+            const accounts = context.bindings.accountsTable.filter(row => {
+                return (row.PartitionKey === req.body.email);
+            });
 
-                const fee = await server.fetchBaseFee();
-                const newAccountKeyPair = StellarSdk.Keypair.random();
-
-                const transaction = new StellarSdk.TransactionBuilder(account, {
-                    fee, networkPassphrase: StellarSdk.Networks.TESTNET
-                }).addOperation(StellarSdk.Operation.createAccount({
-                    destination: newAccountKeyPair.publicKey(),
-                    startingBalance: '1'
-                })).setTimeout(30).build();
-
-                transaction.sign(sourceAccountKeyPair);
-
-                const transactionResult = await server.submitTransaction(transaction);
-
-                context.bindings.accountsTable = [];
-
-                context.bindings.accountsTable.push({
-                    PartitionKey: newEmail,
-                    RowKey: newAccountKeyPair.publicKey(),
-                    Secret: newAccountKeyPair.secret()
-                });
-
+            if (accounts.length > 0) {
+                let publicKeys = [];
+                accounts.forEach(account => publicKeys.push(account.RowKey));
                 context.res = {
-                    // status: 200, /* Defaults to 200 */
                     body: {
                         status: "Succeeded",
-                        transactionResult,
-                        publicKey: newAccountKeyPair.publicKey()
+                        publicKeys
                     }
                 };
-            } catch(e) {
-                context.res = {
-                    status: 400,
-                    body: {
-                        status: "Error"
-                    }
-                };
+            } else {
+                try {
+                    const newAccountKeyPair = StellarSdk.Keypair.random();
+
+                    context.bindings.accountsTable = [];
+
+                    context.bindings.accountsTable.push({
+                        PartitionKey: newEmail,
+                        RowKey: newAccountKeyPair.publicKey(),
+                        Secret: newAccountKeyPair.secret()
+                    });
+
+                    context.res = {
+                        // status: 200, /* Defaults to 200 */
+                        body: {
+                            status: "Succeeded",
+                            publicKey: newAccountKeyPair.publicKey()
+                        }
+                    };
+                } catch (e) {
+                    context.res = {
+                        status: 400,
+                        body: {
+                            status: "Error"
+                        }
+                    };
+                }
             }
         }
         else {
