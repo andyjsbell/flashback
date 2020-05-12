@@ -5,11 +5,10 @@ module.exports = async function (context, req) {
 
     context.log("GetVoucher endpoint called", req.body);
 
-    if (req.body &&
-        req.body.to &&
-        req.body.email) {
+    if (req.query &&
+        req.query.email) {
 
-        const email = req.body.email;
+        const email = req.query.email;
 
         if (validateEmail(email)) {
 
