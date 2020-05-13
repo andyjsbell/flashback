@@ -176,7 +176,7 @@ function App() {
                       from: email,
                       xdr1,
                       xdr2,
-                      escrowAccount: escrowKeyPair.publicKey()
+                      escrow: escrowKeyPair.publicKey()
                     })
                   }).then(response => {
                     return response.json().then(body => {
