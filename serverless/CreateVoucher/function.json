@@ -8,7 +8,7 @@
       "methods": [
         "post"
       ],
-      "route": "vouchers"
+      "route": "vouchers/create"
     },
     {
       "type": "http",
@@ -28,6 +28,13 @@
       "name": "vouchersTable",
       "type": "table",
       "direction": "in"
+    },
+    {
+      "tableName": "Vouchers",
+      "connection": "AzureWebJobsStorage",
+      "name": "outVouchersTable",
+      "type": "table",
+      "direction": "out"
     }
   ]
 }
