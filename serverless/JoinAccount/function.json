@@ -20,7 +20,7 @@
       "connection": "AzureWebJobsStorage",
       "name": "accountsTable",
       "type": "table",
-      "direction": "in"
+      "direction": "out"
     }
   ]
 }
