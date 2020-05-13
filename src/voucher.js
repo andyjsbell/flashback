@@ -32,7 +32,13 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
 
     const startingBalance = new BigNumber('1.6');
     const feeCost = new BigNumber('0.00001');
-    const adjustTransferAmount = (new BigNumber(transferAmount).minus(startingBalance).plus(feeCost)).toString();
+    const adjustTransferAmount = (new BigNumber(transferAmount).minus(startingBalance).plus(feeCost));
+    // Check balance
+    const currentBalance = sourceAccount.balances[0].balance;
+
+    if (new BigNumber(currentBalance).minus(new BigNumber(transferAmount)).minus(feeCost).isLessThan(1)) {
+      throw new Error('Insufficient balance');
+    }
 
     const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
       fee, networkPassphrase: StellarSdk.Networks.TESTNET
@@ -68,7 +74,7 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
     })
       .addOperation(StellarSdk.Operation.payment({
       destination: escrowAccountKeyPair.publicKey(),
-      amount:adjustTransferAmount,
+      amount:adjustTransferAmount.toString(),
       asset: StellarSdk.Asset.native()
     }))
       .addOperation(StellarSdk.Operation.setOptions({
