@@ -1,8 +1,13 @@
 import React, {useState} from 'react';
 import './App.css';
 import StellarSdk from 'stellar-sdk';
-import {validateEmail} from "../serverless/emails";
 import {createVoucher} from "./voucher";
+import BigNumber from 'bignumber.js';
+
+const validateEmail = (email) => {
+  const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+};
 
 const API_URL = 'http://localhost:7071/api';
 
@@ -15,18 +20,31 @@ function App() {
   const [sendAmount, setSendAmount] = useState(0);
   const [voucher, setVoucher] = useState('');
   const [vouchers, setVouchers] = useState([]);
+  const [balance, setBalance] = useState('');
 
   const login = async () => {
     if (validateEmail(email)) {
       const response = await fetch(`${API_URL}/accounts/login`, {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({
+          email
+        })
       });
 
       const body = await response.json();
+
       if (body.status === 'Succeeded') {
+        setMessage('Logged in');
         setAccounts(body.accounts);
+        const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
+
+        server.loadAccount(body.accounts[0].RowKey).then(account => {
+          // Get balance
+          setBalance(account.balances[0].balance);
+        });
+
       } else {
-        setError('Failed to login');
+        setError('Failed to login:' + body.message);
       }
     } else {
       setError('invalid email');
@@ -39,16 +57,22 @@ function App() {
 
   const join = async () => {
     if (validateEmail(email)) {
+
+      setMessage('Joining with ' + email);
+
       const response = await fetch(`${API_URL}/accounts/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json;charset=utf-8'
         },
-        body: JSON.stringify(email)
+        body: JSON.stringify({
+          email
+        })
       });
 
       const body = await response.json();
       if (body.status === 'Succeeded') {
+        setMessage('Account created')
         setAccounts([body.account]);
       } else {
         setError('Failed to join');
@@ -59,88 +83,121 @@ function App() {
   };
 
   const send = async () => {
-    if (validateEmail(destinationEmail) && parseInt(sendAmount) > 0) {
-      const response = await fetch(`${API_URL}/accounts/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=utf-8'
-        },
-        body: JSON.stringify(destinationEmail)
-      });
+    const toSend = new BigNumber(sendAmount);
+    setError('');
 
-      const body = await response.json();
-      if (body.status === 'Succeeded') {
-        const publicKey = body.publicKey;
-        // Default to send to first account
-        const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
-        const senderAccountKeyPair = StellarSdk.Keypair.fromSecret(accounts[0].Secret);
-
-        try {
-          // Will throw error if account doesn't exist
-          server.loadAccount(publicKey)
-          .then(destinationAccount => {
-            // Send payment directly
-
-            return server.loadAccount(senderAccountKeyPair.publicKey()).then(senderAccount => {
-
-              server.fetchBaseFee().then(fee => {
-
-                const transaction = new StellarSdk.TransactionBuilder(senderAccount, {
-                  fee, networkPassphrase: StellarSdk.Networks.TESTNET
-                })
-                .addOperation(StellarSdk.Operation.payment({
-                  destination: destinationAccount.publicKey(),
-                  amount:sendAmount,
-                  asset: StellarSdk.Asset.native()
-                }));
-
-                transaction.sign(senderAccountKeyPair);
-
-                return server.submitTransaction(transaction)
-                  .then(tx => {setMessage(tx)})
-                  .catch(e=>setError(e));
-
-              });
-            });
+    if (validateEmail(destinationEmail)) {
+      if (!toSend.isNaN() && toSend.toNumber() > 0) {
+        const response = await fetch(`${API_URL}/accounts/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+          },
+          body: JSON.stringify({
+            email: destinationEmail
           })
-          .catch(err => {
-             // This is an empty account, we can create a voucher for them to pick up
-            createVoucher(sendAmount, senderAccountKeyPair, publicKey)
-              .then(([escrowKeyPair, xdr1, xdr2]) => {
+        });
 
-                setVoucher(`escrow ${escrowKeyPair.publicKey()} xdr1 ${xdr1} xdr2 ${xdr2}`);
+        const body = await response.json();
+        if (body.status === 'Succeeded') {
+          const destinationPublicKey = body.publicKeys[0];
+          // Default to send from first account
+          const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
+          const senderAccountKeyPair = StellarSdk.Keypair.fromSecret(accounts[0].Secret);
 
-                fetch(`${API_URL}/vouchers/create`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json;charset=utf-8'
-                  },
-                  body: JSON.stringify({
-                    to: destinationEmail,
-                    from: email,
-                    xdr1,
-                    xdr2,
-                    escrowAccount: escrowKeyPair.publicKey()
-                  })
-                }).then(response => {
-                  return response.json().then(body => {
-                    if (body.status === 'Succeeded') {
-                      setMessage('Voucher created and posted');
-                    } else {
-                      setError('Failed to post voucher');
-                    }
+          try {
+
+            // Will throw error if account doesn't exist
+            server.loadAccount(destinationPublicKey)
+            .then(destinationAccount => {
+              // Send payment directly
+
+              server.loadAccount(senderAccountKeyPair.publicKey()).then(senderAccount => {
+
+                const currentBalance = senderAccount.balances[0].balance;
+                setBalance(currentBalance);
+
+                server.fetchBaseFee().then(fee => {
+
+                  const feeInXLM = new BigNumber(fee).times("0.0000001");
+
+                  const remainingBalance = new BigNumber(currentBalance).minus(toSend).minus(feeInXLM);
+
+                  if (remainingBalance.isLessThan(1)) {
+
+                    console.log(remainingBalance.toString());
+                    setError('insufficient balance, you need more than 1 XLM left in your account after transfer')
+
+                  } else {
+
+                    const transaction = new StellarSdk.TransactionBuilder(senderAccount, {
+                      fee, networkPassphrase: StellarSdk.Networks.TESTNET
+                    })
+                      .addOperation(StellarSdk.Operation.payment({
+                        destination: destinationPublicKey,
+                        amount: sendAmount,
+                        asset: StellarSdk.Asset.native()
+                      })).setTimeout(30).build();
+
+                    transaction.sign(senderAccountKeyPair);
+
+                    return server.submitTransaction(transaction)
+                      .then(tx => {
+                        setMessage(JSON.stringify(tx))
+
+                        server.loadAccount(senderAccountKeyPair.publicKey()).then(senderAccount => {
+
+                          setBalance(senderAccount.balances[0].balance);
+
+                        }).catch(e => setError(JSON.stringify(e)));
+
+                      })
+                      .catch(e => setError(JSON.stringify(e)));
+                  }
+                });
+              });
+            })
+            .catch(err => {
+               // This is an empty account, we can create a voucher for them to pick up
+              createVoucher(sendAmount, senderAccountKeyPair, destinationPublicKey)
+                .then(([escrowKeyPair, xdr1, xdr2]) => {
+
+                  setVoucher(`escrow ${escrowKeyPair.publicKey()} xdr1 ${xdr1} xdr2 ${xdr2}`);
+
+                  fetch(`${API_URL}/vouchers/create`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                      to: destinationEmail,
+                      from: email,
+                      xdr1,
+                      xdr2,
+                      escrowAccount: escrowKeyPair.publicKey()
+                    })
+                  }).then(response => {
+                    return response.json().then(body => {
+                      if (body.status === 'Succeeded') {
+                        setMessage('Voucher created and posted');
+                      } else {
+                        setError('Failed to post voucher');
+                      }
+                    }).catch(err => setError(err));
+
                   }).catch(err => setError(err));
+                })
+                .catch(e => setError(e));
+            });
 
-                }).catch(err => setError(err));
-              })
-              .catch(e => setError(e));
-          });
+          } catch (e) {
 
-        } catch (e) {
-
+          }
+        } else {
+          setError('Failed to join');
         }
       } else {
-        setError('Failed to join');
+        setError('Invalid amount');
       }
     } else {
       setError('invalid email');
@@ -166,17 +223,21 @@ function App() {
     <>
       <h3>Message: {message}</h3>
       <h3>Error: {error}</h3>
+      <h3>Account[0]: {accounts[0] ? accounts[0].RowKey : null}</h3>
+      <h3>Balance: {balance?balance : 0} XLM</h3>
       <h3>Voucher: {voucher}</h3>
       <h3>email: {email}</h3>
       <h3>destination email: {destinationEmail}</h3>
       <h3>send amount: {sendAmount}</h3>
+      <hr/>
 
-      <input type="text" name="email" value={email} onChange={(e) => setEmail(e.target.value)}/>
-      <input type="text" name="destinationEmail" value={destinationEmail} onChange={(e) => setDestinationEmail(e.target.value)}/>
-      <input type="text" name="sendAmount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)}/>
+      Email: <input type="text" name="email" value={email} onChange={(e) => setEmail(e.target.value)}/><br/>
+      Destination Email: <input type="text" name="destinationEmail" value={destinationEmail} onChange={(e) => setDestinationEmail(e.target.value)}/><br/>
+      Send Amount: <input type="text" name="sendAmount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)}/><br/>
 
       <h3>Vouchers</h3>
 
+      <hr/>
       <button onClick={() => login()}>Login</button>
       <button onClick={() => join()}>Join</button>
       <button onClick={() => send()}>Send</button>
