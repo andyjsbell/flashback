@@ -38,7 +38,7 @@ module.exports = async function (context, req) {
                         // status: 200, /* Defaults to 200 */
                         body: {
                             status: "Succeeded",
-                            publicKey: newAccountKeyPair.publicKey()
+                            publicKeys: [newAccountKeyPair.publicKey()]
                         }
                     };
                 } catch (e) {
