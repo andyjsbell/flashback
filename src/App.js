@@ -185,11 +185,11 @@ function App() {
                       } else {
                         setError('Failed to post voucher');
                       }
-                    }).catch(err => setError(err));
+                    }).catch(err => setError(JSON.stringify(err)));
 
-                  }).catch(err => setError(err));
+                  }).catch(err => setError(JSON.stringify(err)));
                 })
-                .catch(e => setError(e));
+                .catch(e => setError(JSON.stringify(e)));
             });
 
           } catch (e) {
