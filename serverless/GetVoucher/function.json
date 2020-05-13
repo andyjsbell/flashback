@@ -20,14 +20,14 @@
       "connection": "AzureWebJobsStorage",
       "name": "accountsTable",
       "type": "table",
-      "direction": "out"
+      "direction": "in"
     },
     {
       "tableName": "Vouchers",
       "connection": "AzureWebJobsStorage",
       "name": "vouchersTable",
       "type": "table",
-      "direction": "out"
+      "direction": "in"
     }
   ]
 }
