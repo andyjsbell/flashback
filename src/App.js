@@ -143,7 +143,9 @@ function App() {
 
                     return server.submitTransaction(transaction)
                       .then(tx => {
-                        setMessage(JSON.stringify(tx))
+                        console.log(tx)
+
+                        setMessage('Transaction succeeded');
 
                         server.loadAccount(senderAccountKeyPair.publicKey()).then(senderAccount => {
 
