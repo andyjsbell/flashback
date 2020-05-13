@@ -26,9 +26,9 @@ module.exports = async function (context, req) {
                 try {
                     const newAccountKeyPair = StellarSdk.Keypair.random();
 
-                    context.bindings.accountsTable = [];
+                    context.bindings.outAccountsTable = [];
 
-                    context.bindings.accountsTable.push({
+                    context.bindings.outAccountsTable.push({
                         PartitionKey: newEmail,
                         RowKey: newAccountKeyPair.publicKey(),
                         Secret: newAccountKeyPair.secret()

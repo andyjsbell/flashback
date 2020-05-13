@@ -21,6 +21,13 @@
       "name": "accountsTable",
       "type": "table",
       "direction": "in"
+    },
+    {
+      "tableName": "Accounts",
+      "connection": "AzureWebJobsStorage",
+      "name": "outAccountsTable",
+      "type": "table",
+      "direction": "out"
     }
   ]
 }
