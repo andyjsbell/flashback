@@ -20,7 +20,7 @@ module.exports = async function (context, req) {
         const fromEmail = req.body.from;
         const xdr1 = req.body.xdr1;
         const xdr2 = req.body.xdr2;
-        const escrowAccount = req.body.escrowAccount;
+        const escrowAccount = req.body.escrow;
 
         if (validateEmail(toEmail) &&
             validateEmail(fromEmail) &&
@@ -37,9 +37,9 @@ module.exports = async function (context, req) {
 
             if (toAccounts.length > 0 && fromAccounts.length > 0) {
 
-                context.bindings.accountsTable = [];
+                context.bindings.outVouchersTable = [];
 
-                context.bindings.vouchersTable.push({
+                context.bindings.outVouchersTable.push({
                     PartitionKey: fromEmail,
                     RowKey: toEmail,
                     xdr1,
@@ -59,6 +59,8 @@ module.exports = async function (context, req) {
                     }
                 };
             } else {
+                context.log("invalid source or destination accounts");
+
                 context.res = {
                     status: 400,
                     // status: 200, /* Defaults to 200 */
@@ -70,12 +72,14 @@ module.exports = async function (context, req) {
             }
         }
         else {
+            context.log("check params");
             context.res = {
                 status: 400,
                 body: "Please pass emails and transactions"
             };
         }
     } else {
+        context.log("check body");
         context.res = {
             status: 400,
             body: "Please pass a valid body"
