@@ -5,7 +5,7 @@ const TEST_ACCOUNT_SECRET = "SBMRMWK2ZAIRIMK7JPIPXKYIS57TKCV3BTYNWPCZWWNU6YLB4NJ
 
 module.exports = async function (context, req) {
 
-    context.log("JoinAccount endpoint called", req.body);
+    context.log("JoinAccount endpoint called");
 
     if (req.body && req.body.email) {
         const newEmail = req.body.email;
@@ -23,7 +23,7 @@ module.exports = async function (context, req) {
                     fee, networkPassphrase: StellarSdk.Networks.TESTNET
                 }).addOperation(StellarSdk.Operation.createAccount({
                     destination: newAccountKeyPair.publicKey(),
-                    startingBalance: '1'
+                    startingBalance: '2'
                 })).setTimeout(30).build();
 
                 transaction.sign(sourceAccountKeyPair);
