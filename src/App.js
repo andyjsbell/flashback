@@ -101,6 +101,8 @@ function App() {
         const body = await response.json();
         if (body.status === 'Succeeded') {
           const destinationPublicKey = body.publicKeys[0];
+          const servicePublicKey = body.servicePublicKey;
+
           // Default to send from first account
           const server = new StellarSdk.Server('https://horizon-testnet.stellar.org');
           const senderAccountKeyPair = StellarSdk.Keypair.fromSecret(accounts[0].Secret);
@@ -161,7 +163,7 @@ function App() {
             })
             .catch(err => {
                // This is an empty account, we can create a voucher for them to pick up
-              createVoucher(sendAmount, senderAccountKeyPair, destinationPublicKey)
+              createVoucher(sendAmount, senderAccountKeyPair, destinationPublicKey, servicePublicKey)
                 .then(([escrowKeyPair, xdr1, xdr2]) => {
 
                   setVoucher(`escrow ${escrowKeyPair.publicKey()} xdr1 ${xdr1} xdr2 ${xdr2}`);
