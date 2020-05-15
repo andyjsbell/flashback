@@ -120,7 +120,7 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
     ];
 
   } catch (e) {
-    console.log(e);
+    console.log(e.message);
   }
 
 }
