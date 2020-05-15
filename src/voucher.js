@@ -44,18 +44,19 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
     })
       // Create the escrow account with starting balance
       .addOperation(StellarSdk.Operation.createAccount({
-      destination: escrowAccountKeyPair.publicKey(),
-      startingBalance: startingBalance.toString()
+        destination: escrowAccountKeyPair.publicKey(),
+        startingBalance: startingBalance.toString()
     }))
       // Set source account as signer for the escrow account
       .addOperation(StellarSdk.Operation.setOptions({
-      signer: {
-        ed25519PublicKey: sourceAccountKeyPair.publicKey(),
-        weight: 1
-      }
+        signer: {
+          ed25519PublicKey: sourceAccountKeyPair.publicKey(),
+          weight: 1
+        },
+        source: escrowAccountKeyPair.publicKey()
     })).setTimeout(30).build();
 
-    transaction.sign(sourceAccountKeyPair);
+    transaction.sign(sourceAccountKeyPair, escrowAccountKeyPair);
     const transactionResult = await server.submitTransaction(transaction);
     // Escrow created
     // Load escrow account to get latest sequence number
