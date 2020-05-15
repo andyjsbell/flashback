@@ -15,13 +15,16 @@ module.exports = async function (context, req) {
                 return (row.PartitionKey === req.body.email);
             });
 
+            const sourceAccountKeyPair = StellarSdk.Keypair.fromSecret(TEST_ACCOUNT_SECRET);
+
             if (accounts.length > 0) {
                 let publicKeys = [];
                 accounts.forEach(account => publicKeys.push(account.RowKey));
                 context.res = {
                     body: {
                         status: "Succeeded",
-                        publicKeys
+                        publicKeys,
+                        servicePublicKey: sourceAccountKeyPair.publicKey()
                     }
                 };
             } else {
@@ -35,8 +38,6 @@ module.exports = async function (context, req) {
                         RowKey: newAccountKeyPair.publicKey(),
                         Secret: newAccountKeyPair.secret()
                     });
-
-                    const sourceAccountKeyPair = StellarSdk.Keypair.fromSecret(TEST_ACCOUNT_SECRET);
 
                     context.res = {
                         // status: 200, /* Defaults to 200 */
