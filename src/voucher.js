@@ -1,10 +1,9 @@
 import StellarSdk from 'stellar-sdk';
 import BigNumber from 'bignumber.js';
-
 let fee = 0;
 const timeout = 5 * 60;
 
-const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAccountPublicKey) => {
+const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAccountPublicKey, servicePublicKey) => {
 
   // We are sending to destination account DEST_ACCOUNT, this is a new account which we create(PK would be returned from
   // central server, for this test we will use DEST_ACCOUNT
@@ -30,7 +29,7 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
     // The whole things cost 0.0000600 XLM however it seems we need 1.6 to start this in the escrow... not sure...
     // but with this we transfer transferAmount XLM to destination. At XLM at 0.06 EUR that is 0.0000036 EUR voucher cost !!!
 
-    const startingBalance = new BigNumber('1.6');
+    const startingBalance = new BigNumber('1.5');
     const feeCost = new BigNumber('0.00001');
     const adjustTransferAmount = (new BigNumber(transferAmount).minus(startingBalance).plus(feeCost));
     // Check balance
@@ -42,9 +41,18 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
 
     const transaction = new StellarSdk.TransactionBuilder(sourceAccount, {
       fee, networkPassphrase: StellarSdk.Networks.TESTNET
-    }).addOperation(StellarSdk.Operation.createAccount({
+    })
+      // Create the escrow account with starting balance
+      .addOperation(StellarSdk.Operation.createAccount({
       destination: escrowAccountKeyPair.publicKey(),
       startingBalance: startingBalance.toString()
+    }))
+      // Set source account as signer for the escrow account
+      .addOperation(StellarSdk.Operation.setOptions({
+      signer: {
+        ed25519PublicKey: sourceAccountKeyPair.publicKey(),
+        weight: 1
+      }
     })).setTimeout(30).build();
 
     transaction.sign(sourceAccountKeyPair);
@@ -53,30 +61,21 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
     // Load escrow account to get latest sequence number
     const escrow_account = await server.loadAccount(escrowAccountKeyPair.publicKey());
 
-    // Add sender as signer to escrow
-    const transaction_1 = new StellarSdk.TransactionBuilder(escrow_account, {
-      fee, networkPassphrase: StellarSdk.Networks.TESTNET
-    }).addOperation(StellarSdk.Operation.setOptions({
-      signer: {
-        ed25519PublicKey: sourceAccountKeyPair.publicKey(),
-        weight: 1
-      }
-    })).setTimeout(30).build();
-
-    transaction_1.sign(escrowAccountKeyPair);
-    const transactionResult_1 = await server.submitTransaction(transaction_1);
-
     // Create pre-auth merge ops
     const [preAuthTx_1, preAuthTx_2] = createPreAuthTx(escrowAccountKeyPair, escrow_account.sequenceNumber(), destinationAccountPublicKey, sourceAccountKeyPair);
+
+    // TODO we need to have these pre authorised transactions stored safe before we make the payment
 
     const transaction_2 = new StellarSdk.TransactionBuilder(sourceAccount, {
       fee, networkPassphrase: StellarSdk.Networks.TESTNET
     })
+      // Pay the amount into escrow, we have created the account already
       .addOperation(StellarSdk.Operation.payment({
       destination: escrowAccountKeyPair.publicKey(),
       amount:adjustTransferAmount.toString(),
       asset: StellarSdk.Asset.native()
     }))
+      // Add pre auth transaction to send to destination
       .addOperation(StellarSdk.Operation.setOptions({
       signer: {
         preAuthTx: preAuthTx_1.hash(),
@@ -84,6 +83,7 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
       },
       source: escrowAccountKeyPair.publicKey()
     }))
+      // Add pre auth transaction to send back to sender
       .addOperation(StellarSdk.Operation.setOptions({
       signer: {
         preAuthTx: preAuthTx_2.hash(),
@@ -92,12 +92,16 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
       masterWeight: 0,
       source: escrowAccountKeyPair.publicKey()
     }))
+      // Set service as signer and set thresholds on account to 2, this allows service and sender to recover funds if needed
+      // for example the XDR go missing we can recreate them or just refund the sender account
       .addOperation(StellarSdk.Operation.setOptions({
         signer: {
-          ed25519PublicKey: sourceAccountKeyPair.publicKey(),
-          weight: 0
+          ed25519PublicKey: servicePublicKey,
+          weight: 1
         },
-        masterWeight: 0,
+        highThreshold: 2,
+        medThreshold: 2,
+        lowThreshold: 2,
         source: escrowAccountKeyPair.publicKey()
       }))
       .setTimeout(30).build();
