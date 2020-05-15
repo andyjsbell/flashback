@@ -90,7 +90,6 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
         preAuthTx: preAuthTx_2.hash(),
         weight: 1
       },
-      masterWeight: 0,
       source: escrowAccountKeyPair.publicKey()
     }))
       // Set service as signer and set thresholds on account to 2, this allows service and sender to recover funds if needed
@@ -103,6 +102,7 @@ const createVoucher = async (transferAmount, sourceAccountKeyPair, destinationAc
         highThreshold: 2,
         medThreshold: 2,
         lowThreshold: 2,
+        masterWeight: 0,
         source: escrowAccountKeyPair.publicKey()
       }))
       .setTimeout(30).build();
