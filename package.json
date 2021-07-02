@@ -10,7 +10,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
-    "stellar-sdk": "^4.1.0"
+    "stellar-sdk": "^8.2.3"
   },
   "scripts": {
     "start": "react-scripts start",
